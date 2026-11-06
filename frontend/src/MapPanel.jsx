@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-const MAPBOX_TOKEN =
-  'REMOVED_MAPBOX_TOKEN';
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
 const initialCenter = [139.6917, 35.6895];
 const emotionColorMap = {
