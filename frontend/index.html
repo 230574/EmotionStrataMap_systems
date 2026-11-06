@@ -18,7 +18,7 @@
         border-radius: 12px;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
         padding: 32px;
-        width: min(500px, 90vw);
+        width: min(700px, 90vw);
       }
       h1 {
         margin-top: 0;
@@ -40,43 +40,81 @@
         background: #2563eb;
         color: white;
         cursor: pointer;
+        margin-bottom: 16px;
+      }
+      pre {
+        background: #f3f4f6;
+        padding: 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        white-space: pre-wrap;
       }
     </style>
   </head>
   <body>
     <main class="card">
       <h1>EmotionStrataMap</h1>
-      <button id="loadButton" type="button">Load backend message</button>
+      <button id="loadButton" type="button">現在地を取得して API に送る</button>
       <div id="message" class="message">Loading...</div>
       <div id="status" class="status"></div>
+      <pre id="result">まだ実行していません</pre>
     </main>
 
     <script>
       const messageEl = document.getElementById('message');
       const statusEl = document.getElementById('status');
+      const resultEl = document.getElementById('result');
 
-      async function loadMessage() {
+      async function loadUserLocation() {
+        if (!navigator.geolocation) {
+          messageEl.textContent = 'Geolocation API is not supported';
+          statusEl.textContent = 'このブラウザでは位置情報が使えません';
+          return;
+        }
+
+        messageEl.textContent = '位置情報を取得中...';
+        statusEl.textContent = 'ブラウザの位置情報許可を確認しています';
+
         try {
-          const response = await fetch('http://localhost:8080/api/hello', {
-            method: 'GET',
-            mode: 'cors'
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
           });
 
-          if (!response.ok) {
-            throw new Error('HTTP ' + response.status);
-          }
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
 
-          const data = await response.json();
-          messageEl.textContent = data.message;
-          statusEl.textContent = 'Connected to local backend (' + data.status + ')';
+          const locationRes = await fetch('http://localhost:8080/api/location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat, lng })
+          });
+
+          const locationData = await locationRes.json();
+          console.log('locationData:', locationData);
+
+          messageEl.textContent = '位置情報をバックエンドへ送信しました';
+          statusEl.textContent = 'center: ' + JSON.stringify(locationData.center);
+
+          if (locationData.mapPointsUrl) {
+            const mapUrl = 'http://localhost:8080' + locationData.mapPointsUrl;
+            const mapRes = await fetch(mapUrl);
+            const mapData = await mapRes.json();
+
+            resultEl.textContent = JSON.stringify({
+              location: locationData,
+              mapPoints: mapData
+            }, null, 2);
+          } else {
+            resultEl.textContent = JSON.stringify(locationData, null, 2);
+          }
         } catch (error) {
-          messageEl.textContent = 'Unable to connect';
+          messageEl.textContent = '位置情報の取得に失敗しました';
           statusEl.textContent = error.message;
+          resultEl.textContent = JSON.stringify({ error: error.message }, null, 2);
         }
       }
 
-      document.getElementById('loadButton').addEventListener('click', loadMessage);
-      loadMessage();
+      document.getElementById('loadButton').addEventListener('click', loadUserLocation);
     </script>
   </body>
 </html>
