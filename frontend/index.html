@@ -1,13 +1,120 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>my-app</title>
+    <title>EmotionStrataMap</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f5f5f5;
+      }
+      .card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        padding: 32px;
+        width: min(700px, 90vw);
+      }
+      h1 {
+        margin-top: 0;
+      }
+      .message {
+        margin-top: 16px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1f2937;
+      }
+      .status {
+        margin-top: 12px;
+        color: #4b5563;
+      }
+      button {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 8px;
+        background: #2563eb;
+        color: white;
+        cursor: pointer;
+        margin-bottom: 16px;
+      }
+      pre {
+        background: #f3f4f6;
+        padding: 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <main class="card">
+      <h1>EmotionStrataMap</h1>
+      <button id="loadButton" type="button">現在地を取得して API に送る</button>
+      <div id="message" class="message">Loading...</div>
+      <div id="status" class="status"></div>
+      <pre id="result">まだ実行していません</pre>
+    </main>
+
+    <script>
+      const messageEl = document.getElementById('message');
+      const statusEl = document.getElementById('status');
+      const resultEl = document.getElementById('result');
+
+      async function loadUserLocation() {
+        if (!navigator.geolocation) {
+          messageEl.textContent = 'Geolocation API is not supported';
+          statusEl.textContent = 'このブラウザでは位置情報が使えません';
+          return;
+        }
+
+        messageEl.textContent = '位置情報を取得中...';
+        statusEl.textContent = 'ブラウザの位置情報許可を確認しています';
+
+        try {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
+          });
+
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+
+          const locationRes = await fetch('http://localhost:8080/api/location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat, lng })
+          });
+
+          const locationData = await locationRes.json();
+          console.log('locationData:', locationData);
+
+          messageEl.textContent = '位置情報をバックエンドへ送信しました';
+          statusEl.textContent = 'center: ' + JSON.stringify(locationData.center);
+
+          if (locationData.mapPointsUrl) {
+            const mapUrl = 'http://localhost:8080' + locationData.mapPointsUrl;
+            const mapRes = await fetch(mapUrl);
+            const mapData = await mapRes.json();
+
+            resultEl.textContent = JSON.stringify({
+              location: locationData,
+              mapPoints: mapData
+            }, null, 2);
+          } else {
+            resultEl.textContent = JSON.stringify(locationData, null, 2);
+          }
+        } catch (error) {
+          messageEl.textContent = '位置情報の取得に失敗しました';
+          statusEl.textContent = error.message;
+          resultEl.textContent = JSON.stringify({ error: error.message }, null, 2);
+        }
+      }
+
+      document.getElementById('loadButton').addEventListener('click', loadUserLocation);
+    </script>
   </body>
 </html>
