@@ -31,6 +31,7 @@ const emotionPinAssetMap = {
   '怖い・恐怖': '/images/emotions/anger_red.png',
   '不安・心配': '/images/emotions/fear_purple.png',
   '悲しい・寂しい': '/images/emotions/sad_blue.png',
+  other_plusN: '/images/emotions/other_plusN.png',
   default: '/images/emotions/other_plusN.png',
 };
 
@@ -79,13 +80,37 @@ const districtEmotionMap = {
   E区: { 安心: 22, 楽しい: 18, 不安: 42, 悲しい: 11, 怒り: 7 },
 };
 const normalizeEmotionToGroup = (label) => {
-  if (label === '喜び' || label === '楽しい') return '楽しい';
+  if (label === '楽しい') return '楽しい';
+  if (label === '喜び') return '喜び';
   if (label === '不安・心配') return '不安';
   if (label === '怖い・恐怖') return '怒り';
   if (label === '悲しい・寂しい') return '悲しい';
   if (label === '安心') return '安心';
   return label;
 };
+
+const emotionCommentTemplates = {
+  楽しい: ['公園の雰囲気が明るくて、気分が上がりました。', '笑い声が多くて、少し元気が出ました。'],
+  喜び: ['思い出の場所で、自然と笑顔がこぼれました。', '景色や音が心に残る、嬉しい時間でした。'],
+  不安: ['暗くなってくる時間帯が少し気になりました。', '人通りが少なくて、少し不安を感じました。'],
+  怒り: ['騒音や混雑が気になって、少しイライラしました。', '周辺の様子が落ち着かず、不快に感じました。'],
+  悲しい: ['静かな空気がやや寂しさを感じさせました。', '景色が落ち着いて見えたので、少し憂いを感じました。'],
+  安心: ['周囲が落ち着いていて、安心して歩けました。', '人が多く、安心して過ごせる場所でした。'],
+};
+
+function getCircleComments(point, fallbackEmotion = '楽しい') {
+  const textList = Array.isArray(point?.comments) && point.comments.length > 0 ? point.comments : [];
+  if (textList.length > 0) {
+    return textList;
+  }
+
+  const emotionKey = normalizeEmotionToGroup(point?.emotion || fallbackEmotion || '楽しい');
+  return (emotionCommentTemplates[emotionKey] || emotionCommentTemplates.楽しい).map((text) => ({
+    emotion: emotionKey,
+    text,
+    time: '最近',
+  }));
+}
 
 function resolveEmotionColor(label) {
   if (label === '不安') return emotionColorMap['不安・心配'];
@@ -131,6 +156,11 @@ function getDominantEmotionLabel(centerPoint, points, radiusMeters) {
 
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   const total = sorted.reduce((sum, [, count]) => sum + count, 0);
+
+  if (sorted.length >= 3) {
+    return 'other_plusN';
+  }
+
   const [winnerLabel, winnerCount] = sorted[0];
   const secondCount = sorted[1]?.[1] ?? 0;
   const share = winnerCount / total;
@@ -149,16 +179,78 @@ function getDominantEmotionColor(centerPoint, points, radiusMeters) {
 
 function getEmotionAssetKey(label) {
   const normalized = normalizeEmotionToGroup(label || '楽しい');
+  if (normalized === 'other_plusN') return 'other_plusN';
   if (normalized === '不安') return '不安・心配';
   if (normalized === '怒り') return '怖い・恐怖';
   if (normalized === '悲しい') return '悲しい・寂しい';
   return normalized;
 }
 
+function getInRangeEmotionLabels(centerPoint, points, radiusMeters) {
+  const inRange = points.filter((point) => {
+    if (!point?.coords || !centerPoint?.coords) return false;
+    return haversineDistanceMeters(centerPoint.coords, point.coords) <= radiusMeters;
+  });
+
+  return [...new Set(inRange.map((point) => normalizeEmotionToGroup(point.emotion || '楽しい')))].filter(Boolean);
+}
+
+function clusterNearbyEmotionPoints(points, radiusMeters) {
+  if (!Array.isArray(points) || points.length === 0) {
+    return [];
+  }
+
+  const clusters = [];
+
+  points.forEach((point) => {
+    if (!point?.coords) {
+      return;
+    }
+
+    const existingCluster = clusters.find((cluster) => {
+      if (!cluster.center) {
+        return false;
+      }
+      const centerDistance = haversineDistanceMeters(cluster.center, point.coords);
+      return centerDistance <= Math.max(25, radiusMeters * 0.35);
+    });
+
+    if (existingCluster) {
+      existingCluster.points.push(point);
+      const totalLng = existingCluster.center[0] * existingCluster.points.length + point.coords[0];
+      const totalLat = existingCluster.center[1] * existingCluster.points.length + point.coords[1];
+      const nextCount = existingCluster.points.length + 1;
+      existingCluster.center = [totalLng / nextCount, totalLat / nextCount];
+      return;
+    }
+
+    clusters.push({
+      center: point.coords,
+      points: [point],
+    });
+  });
+
+  return clusters.map((cluster) => {
+    const allClusterPoints = cluster.points;
+    const uniqueEmotionLabels = [...new Set(allClusterPoints.map((item) => normalizeEmotionToGroup(item.emotion || '楽しい')))].filter(Boolean);
+
+    const aggregated = {
+      ...allClusterPoints[0],
+      coords: cluster.center,
+      name: allClusterPoints[0].name,
+      emotion: uniqueEmotionLabels.length > 1 ? 'other_plusN' : allClusterPoints[0].emotion,
+      clusterPoints: allClusterPoints,
+      comments: allClusterPoints.flatMap((item) => getCircleComments(item, item.emotion || '楽しい')),
+    };
+
+    return aggregated;
+  });
+}
+
 const scaleSteps = [
   { label: '5km', radius: 5000, zoom: 10.5 },
   { label: '1km', radius: 1000, zoom: 12.5 },
-  { label: '100m', radius: 100, zoom: 15.5 },
+  { label: '100m', radius: 70, zoom: 15.5 },
   { label: '20m', radius: 20, zoom: 17.5 },
 ];
 
@@ -175,7 +267,7 @@ function metersToPixelsAtZoom(meters, latitude, zoom) {
 
 function getRadiusForZoom(zoom) {
   if (zoom >= 17.0) return 20;
-  if (zoom >= 15.0) return 100;
+  if (zoom >= 15.0) return 70;
   if (zoom >= 12.0) return 1000;
   return 5000;
 }
@@ -390,9 +482,12 @@ function MapPanel() {
   const [textareaText, setTextareaText] = useState('');
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [postPlaceName, setPostPlaceName] = useState('');
+  const [isMapPlaceSelectionMode, setIsMapPlaceSelectionMode] = useState(false);
+  const [hidePlaceInputForSelection, setHidePlaceInputForSelection] = useState(false);
   const [representativePoints, setRepresentativePoints] = useState([]);
   const [postedEmotionPoints, setPostedEmotionPoints] = useState([]);
   const [activeTab, setActiveTab] = useState('map');
+  const mapPlaceSelectionModeRef = useRef(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -416,6 +511,7 @@ function MapPanel() {
           color: '#facc15',
           coords: [Number(item.lng), Number(item.lat)],
           radiusMeters: 5000,
+          comments: getCircleComments({ emotion: '楽しい' }, '楽しい'),
         }));
 
         setRepresentativePoints(samplePoints);
@@ -463,6 +559,10 @@ function MapPanel() {
   }, [scaleIndex]);
 
   useEffect(() => {
+    mapPlaceSelectionModeRef.current = isMapPlaceSelectionMode;
+  }, [isMapPlaceSelectionMode]);
+
+  useEffect(() => {
     const map = mapRef.current;
     if (!map || !window.mapboxgl) {
       return;
@@ -488,16 +588,6 @@ function MapPanel() {
       const isFiveKmScale = scaleIndexRef.current === 0;
       const allVisiblePoints = [...representativePoints, ...postedEmotionPoints];
       const visiblePoints = isFiveKmScale ? representativePoints : allVisiblePoints;
-      const fiveKmDetailPins = isFiveKmScale
-        ? postedEmotionPoints.filter((point) => {
-            const nearby = allVisiblePoints.filter((candidate) => {
-              if (!candidate?.coords || !point?.coords) return false;
-              return haversineDistanceMeters(point.coords, candidate.coords) <= targetRadiusMeters;
-            });
-            const emotionKinds = new Set(nearby.map((candidate) => normalizeEmotionToGroup(candidate.emotion || '楽しい')));
-            return nearby.length > 0 && emotionKinds.size > 1;
-          })
-        : [];
 
       if (visiblePoints.length === 0) {
         return;
@@ -544,21 +634,58 @@ function MapPanel() {
         },
       });
 
-      const markerPoints = isFiveKmScale ? [...representativePoints, ...fiveKmDetailPins] : visiblePoints;
+      const markerPoints = isFiveKmScale ? representativePoints : clusterNearbyEmotionPoints(visiblePoints, targetRadiusMeters);
       const markerEls = markerPoints.map((point) => {
         const pin = document.createElement('div');
         pin.className = 'emotion-pin-marker';
-        pin.title = `${point.name} - ${point.emotion}`;
+        pin.style.cursor = 'pointer';
 
-        const markerEmotion = isFiveKmScale
-          ? (point.radiusMeters === 5000 && point.emotion ? point.emotion : getDominantEmotionLabel(point, allVisiblePoints, targetRadiusMeters))
-          : point.emotion;
+        const markerEmotion = point.clusterPoints && point.clusterPoints.length > 1
+          ? 'other_plusN'
+          : getDominantEmotionLabel(point, allVisiblePoints, targetRadiusMeters);
+        pin.title = `${point.name} - ${markerEmotion}`;
 
-        const img = document.createElement('img');
-        img.src = emotionPinAssetMap[getEmotionAssetKey(markerEmotion)] ?? emotionPinAssetMap.default;
-        img.alt = markerEmotion;
-        img.className = 'emotion-pin-image';
-        pin.appendChild(img);
+        if (markerEmotion === 'other_plusN') {
+          const mixedPin = document.createElement('div');
+          mixedPin.className = 'emotion-pin-mixed';
+
+          const emotionList = [...new Set((point.clusterPoints || [point]).map((item) => normalizeEmotionToGroup(item.emotion || '楽しい')))].slice(0, 4);
+          const remainingCount = Math.max(0, (point.clusterPoints || [point]).length - emotionList.length);
+
+          const strip = document.createElement('div');
+          strip.className = 'emotion-pin-mixed-strip';
+
+          emotionList.forEach((emotionLabel) => {
+            const mini = document.createElement('div');
+            mini.className = 'emotion-pin-mini';
+
+            const miniImg = document.createElement('img');
+            miniImg.src = emotionPinAssetMap[getEmotionAssetKey(emotionLabel)] ?? emotionPinAssetMap.default;
+            miniImg.alt = emotionLabel;
+            miniImg.className = 'emotion-pin-mini-image';
+            mini.appendChild(miniImg);
+            strip.appendChild(mini);
+          });
+
+          const plusBadge = document.createElement('div');
+          plusBadge.className = 'emotion-pin-plus';
+          plusBadge.textContent = remainingCount > 0 ? `+${remainingCount}` : '+N';
+          mixedPin.append(strip, plusBadge);
+          pin.appendChild(mixedPin);
+        } else {
+          const img = document.createElement('img');
+          img.src = emotionPinAssetMap[getEmotionAssetKey(markerEmotion)] ?? emotionPinAssetMap.default;
+          img.alt = markerEmotion;
+          img.className = 'emotion-pin-image';
+          pin.appendChild(img);
+        }
+
+        pin.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!point?.coords || !point?.name) return;
+          setSelectedPlace(buildPlaceData(point.name, point.coords));
+        });
 
         const marker = new window.mapboxgl.Marker({
           element: pin,
@@ -636,9 +763,67 @@ function MapPanel() {
         };
 
         map.on('click', (event) => {
+          if (!mapPlaceSelectionModeRef.current) {
+            return;
+          }
+
           const { lng, lat } = event.lngLat;
-          const placeName = `クリックした場所 (${lng.toFixed(3)}, ${lat.toFixed(3)})`;
+          const placeName = `地図上の場所 (${lng.toFixed(3)}, ${lat.toFixed(3)})`;
           setSelectedPlace(buildPlaceData(placeName, [lng, lat]));
+          setPostPlaceName('');
+          setHidePlaceInputForSelection(true);
+          setIsMapPlaceSelectionMode(false);
+          setIsPosting(true);
+        });
+
+        map.on('click', 'posted-emotion-layer', (event) => {
+          if (mapPlaceSelectionModeRef.current) {
+            return;
+          }
+
+          const feature = event.features?.[0];
+          if (!feature) {
+            return;
+          }
+
+          const pointName = feature.properties?.name || '感情の円';
+          const emotionName = feature.properties?.emotion || '楽しい';
+          const pointCandidates = [...representativePoints, ...postedEmotionPoints];
+          const matchedPoint = pointCandidates.find((point) => {
+            if (!point?.coords) return false;
+            if (point.name !== pointName) return false;
+            return haversineDistanceMeters(point.coords, event.lngLat.toArray()) < 30;
+          }) || pointCandidates.find((point) => point.name === pointName) || {
+            name: pointName,
+            emotion: emotionName,
+            comments: getCircleComments({ emotion: emotionName }, emotionName),
+          };
+
+          const comments = getCircleComments(matchedPoint, emotionName);
+          const popupContent = `
+            <div class="emotion-annotation-popup">
+              <div class="emotion-annotation-title">${pointName}</div>
+              <div class="emotion-annotation-label">${emotionName}</div>
+              <div class="emotion-annotation-list">
+                ${comments
+                  .slice(0, 3)
+                  .map(
+                    (comment) => `
+                      <div class="emotion-annotation-item">
+                        <span class="emotion-annotation-badge">${comment.emotion || emotionName}</span>
+                        <span class="emotion-annotation-time">${comment.time || '最近'}</span>
+                        <p>${comment.text || ''}</p>
+                      </div>`
+                  )
+                  .join('')}
+              </div>
+            </div>
+          `;
+
+          new window.mapboxgl.Popup({ closeButton: true, maxWidth: '240px' })
+            .setLngLat(event.lngLat)
+            .setHTML(popupContent)
+            .addTo(map);
         });
 
         const mapCanvas = map.getCanvas();
@@ -792,6 +977,25 @@ function MapPanel() {
     setSelectedPlace(buildPlaceData(place, [lng, lat]));
   };
 
+  const openMapPlaceSelectionPost = () => {
+    setHidePlaceInputForSelection(true);
+    setIsMapPlaceSelectionMode(true);
+    setIsPosting(false);
+    setPostPlaceName('');
+    setSelectedPlace(null);
+    setStatus('地図をタップして場所を指定してください');
+    setStatusType('');
+  };
+
+  const closePostModal = () => {
+    setIsPosting(false);
+    setIsMapPlaceSelectionMode(false);
+    setHidePlaceInputForSelection(false);
+    setPostPlaceName('');
+    setStatus('');
+    setStatusType('');
+  };
+
   const handleSubmitPost = async () => {
     const typedPlaceName = postPlaceName.trim();
     const targetPlaceName = (typedPlaceName || selectedPlace?.name || '').trim();
@@ -888,12 +1092,17 @@ function MapPanel() {
         coords: coordinates,
         radiusMeters: getRadiusForScaleIndex(scaleIndexRef.current),
         size: 42 + (selectedEmotionData.label === '不安・心配' ? 10 : 0),
+        comments: [
+          { emotion: selectedEmotionData.label, time: timestamp, text: commentText },
+          { emotion: selectedEmotionData.label, time: '最近', text: 'この場所ではその感情が強く感じられています。' },
+        ],
       },
     ]);
 
     setTextareaText('');
     setSelectedEmotion('');
     setPostPlaceName('');
+    setHidePlaceInputForSelection(false);
     setIsPosting(false);
 
     const normalizedEmotion = normalizeEmotionToGroup(selectedEmotionData.label);
@@ -1266,27 +1475,38 @@ function MapPanel() {
           </button>
 
           {isPosting && (
-            <div className="post-overlay" onClick={() => setIsPosting(false)}>
+            <div className="post-overlay" onClick={closePostModal}>
               <div className="post-modal" onClick={(event) => event.stopPropagation()}>
                 <div className="post-header">
                   <h3>感情を投稿する</h3>
-                  <button type="button" className="close-button" onClick={() => setIsPosting(false)}>
+                  <button type="button" className="close-button" onClick={closePostModal}>
                     ×
                   </button>
                 </div>
 
-                <div className="post-step">1 場所を指定</div>
-                <div className="post-place-field">
-                  <label htmlFor="post-place-name" className="post-field-label">場所名</label>
-                  <input
-                    id="post-place-name"
-                    type="text"
-                    value={postPlaceName}
-                    onChange={(event) => setPostPlaceName(event.target.value)}
-                    placeholder={selectedPlace ? selectedPlace.name : '例: 東京駅'}
-                    className="post-place-input"
-                  />
-                </div>
+                {!hidePlaceInputForSelection && (
+                  <>
+                    <div className="post-step">1 場所を指定</div>
+                    <div className="post-place-field">
+                      <label htmlFor="post-place-name" className="post-field-label">場所名</label>
+                      <input
+                        id="post-place-name"
+                        type="text"
+                        value={postPlaceName}
+                        onChange={(event) => setPostPlaceName(event.target.value)}
+                        placeholder={selectedPlace ? selectedPlace.name : '例: 東京駅'}
+                        className="post-place-input"
+                      />
+                    </div>
+                    <button type="button" className="map-select-button" onClick={openMapPlaceSelectionPost}>
+                      地図上をタップして感情を投稿する
+                    </button>
+                  </>
+                )}
+
+                {hidePlaceInputForSelection && (
+                  <div className="post-step">1 場所を指定済み</div>
+                )}
 
                 <div className="post-step">2 今の感情を選ぶ</div>
                 <div className="emotion-grid">
@@ -1314,7 +1534,7 @@ function MapPanel() {
                 <div className="post-footer">
                   <span>{textareaText.length}/200</span>
                   <div className="post-actions">
-                    <button type="button" className="cancel-button" onClick={() => setIsPosting(false)}>
+                    <button type="button" className="cancel-button" onClick={closePostModal}>
                       キャンセル
                     </button>
                     <button type="button" className="submit-button" onClick={handleSubmitPost}>
