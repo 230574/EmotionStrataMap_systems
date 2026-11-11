@@ -1,5 +1,7 @@
+
 import { useEffect, useState } from 'react'
 import './App.css'
+import MapPanel from './MapPanel'
 
 function App() {
   const [message, setMessage] = useState('Loading...')
@@ -23,8 +25,10 @@ function App() {
   return (
     <main className="app-shell">
       <h1>EmotionStrataMap</h1>
-      <p>Backend API response:</p>
-      <div className="message-box">{error || message}</div>
+      <div className="message-box">
+        {error || message}
+      </div>
+      <MapPanel />
     </main>
   )
 }
