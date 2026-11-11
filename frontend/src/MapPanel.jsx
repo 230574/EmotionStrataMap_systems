@@ -116,6 +116,7 @@ function resolveEmotionColor(label) {
   if (label === '怒り') return emotionColorMap['怖い・恐怖'];
   if (label === '悲しい') return emotionColorMap['悲しい・寂しい'];
   if (label === '安心') return emotionColorMap['楽しい'];
+  if (label === 'other_plusN') return emotionColorMap['楽しい'];
   return emotionColorMap[label] ?? emotionColorMap['楽しい'];
 }
 
@@ -155,25 +156,35 @@ function getDominantEmotionLabel(centerPoint, points, radiusMeters) {
 
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   const total = sorted.reduce((sum, [, count]) => sum + count, 0);
-
-  if (sorted.length >= 3) {
-    return 'other_plusN';
-  }
-
   const [winnerLabel, winnerCount] = sorted[0];
   const secondCount = sorted[1]?.[1] ?? 0;
   const share = winnerCount / total;
   const secondShare = secondCount / total;
 
-  if ((share >= 0.4 && share - secondShare >= 0.1) || (share >= 0.3 && share - secondShare >= 0.15)) {
+  const fallbackEmotion = normalizeEmotionToGroup(centerPoint?.emotion ?? '楽しい');
+
+  if (sorted.length === 1) {
+    return winnerLabel || fallbackEmotion;
+  }
+
+  if (share >= 0.6) {
     return winnerLabel;
   }
 
-  return normalizeEmotionToGroup(centerPoint?.emotion ?? '楽しい');
+  if (share >= 0.45 && share - secondShare >= 0.2) {
+    return winnerLabel;
+  }
+
+  return 'other_plusN';
 }
 
 function getDominantEmotionColor(centerPoint, points, radiusMeters) {
-  return resolveEmotionColor(getDominantEmotionLabel(centerPoint, points, radiusMeters));
+  const dominantLabel = getDominantEmotionLabel(centerPoint, points, radiusMeters);
+  if (dominantLabel === 'other_plusN') {
+    return resolveEmotionColor(normalizeEmotionToGroup(centerPoint?.emotion ?? '楽しい'));
+  }
+
+  return resolveEmotionColor(dominantLabel);
 }
 
 function getEmotionAssetKey(label) {
@@ -232,12 +243,17 @@ function clusterNearbyEmotionPoints(points, radiusMeters) {
   return clusters.map((cluster) => {
     const allClusterPoints = cluster.points;
     const uniqueEmotionLabels = [...new Set(allClusterPoints.map((item) => normalizeEmotionToGroup(item.emotion || '楽しい')))].filter(Boolean);
+    const dominantEmotion = getDominantEmotionLabel(
+      { coords: cluster.center, emotion: allClusterPoints[0].emotion },
+      allClusterPoints,
+      radiusMeters
+    );
 
     const aggregated = {
       ...allClusterPoints[0],
       coords: cluster.center,
       name: allClusterPoints[0].name,
-      emotion: uniqueEmotionLabels.length > 1 ? 'other_plusN' : allClusterPoints[0].emotion,
+      emotion: uniqueEmotionLabels.length > 1 && dominantEmotion === 'other_plusN' ? 'other_plusN' : dominantEmotion,
       clusterPoints: allClusterPoints,
       comments: allClusterPoints.flatMap((item) => getCircleComments(item, item.emotion || '楽しい')),
     };
@@ -487,6 +503,7 @@ function MapPanel() {
   const [postedEmotionPoints, setPostedEmotionPoints] = useState([]);
   const [activeTab, setActiveTab] = useState('map');
   const mapPlaceSelectionModeRef = useRef(false);
+  const generatedDummyIdsRef = useRef([]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -592,10 +609,29 @@ function MapPanel() {
         return;
       }
 
+      const shouldClusterAtOneKm = scaleIndexRef.current === 1;
+      const shouldClusterAtCloseZoom = scaleIndexRef.current >= 2;
+      const fiveKmDisplayPoints = isFiveKmScale
+        ? representativePoints.map((point) => ({
+            ...point,
+            clusterPoints: allVisiblePoints.filter((candidate) => haversineDistanceMeters(point.coords, candidate.coords) <= targetRadiusMeters),
+            emotion: getDominantEmotionLabel(point, allVisiblePoints, targetRadiusMeters),
+          }))
+        : [];
+      const aggregatedVisiblePoints = isFiveKmScale
+        ? fiveKmDisplayPoints
+        : shouldClusterAtOneKm || shouldClusterAtCloseZoom
+          ? clusterNearbyEmotionPoints(visiblePoints, targetRadiusMeters)
+          : visiblePoints;
+
       const circleGeoJson = {
         type: 'FeatureCollection',
-        features: visiblePoints.map((point) => {
-          const sourcePoints = isFiveKmScale ? allVisiblePoints : visiblePoints;
+        features: aggregatedVisiblePoints.map((point) => {
+          const sourcePoints = isFiveKmScale
+            ? allVisiblePoints
+            : (shouldClusterAtOneKm || shouldClusterAtCloseZoom) && point.clusterPoints && point.clusterPoints.length > 1
+              ? point.clusterPoints
+              : [point];
           const dominantColor = getDominantEmotionColor(point, sourcePoints, targetRadiusMeters);
 
           return {
@@ -633,23 +669,24 @@ function MapPanel() {
         },
       });
 
-      const markerPoints = isFiveKmScale ? representativePoints : clusterNearbyEmotionPoints(visiblePoints, targetRadiusMeters);
+      const markerPoints = isFiveKmScale ? fiveKmDisplayPoints : (shouldClusterAtOneKm || shouldClusterAtCloseZoom ? aggregatedVisiblePoints : visiblePoints);
       const markerEls = markerPoints.map((point) => {
         const pin = document.createElement('div');
         pin.className = 'emotion-pin-marker';
         pin.style.cursor = 'pointer';
 
-        const markerEmotion = point.clusterPoints && point.clusterPoints.length > 1
-          ? 'other_plusN'
-          : getDominantEmotionLabel(point, allVisiblePoints, targetRadiusMeters);
+        const clusterPoints = point.clusterPoints || [point];
+        const clusterEmotionGroups = [...new Set(clusterPoints.map((item) => normalizeEmotionToGroup(item.emotion || '楽しい')))].filter(Boolean);
+        const isMixedCluster = clusterPoints.length > 1 && clusterEmotionGroups.length > 1;
+        const markerEmotion = isMixedCluster ? 'other_plusN' : getDominantEmotionLabel(point, clusterPoints, targetRadiusMeters);
         pin.title = `${point.name} - ${markerEmotion}`;
 
         if (markerEmotion === 'other_plusN') {
           const mixedPin = document.createElement('div');
           mixedPin.className = 'emotion-pin-mixed';
 
-          const emotionList = [...new Set((point.clusterPoints || [point]).map((item) => normalizeEmotionToGroup(item.emotion || '楽しい')))].slice(0, 4);
-          const remainingCount = Math.max(0, (point.clusterPoints || [point]).length - emotionList.length);
+          const emotionList = clusterEmotionGroups.slice(0, 4);
+          const remainingCount = Math.max(0, clusterPoints.length - emotionList.length);
 
           const strip = document.createElement('div');
           strip.className = 'emotion-pin-mixed-strip';
@@ -1128,6 +1165,46 @@ function MapPanel() {
   };
 
   const currentRegionEmotionStats = regionEmotionStats[selectedRegion] || districtEmotionMap[selectedRegion] || districtEmotionMap.A区;
+
+  const handleGenerateTokyoDummyData = () => {
+    const emotionOptionsPool = ['楽しい', '喜び', '不安・心配', '怖い・恐怖', '悲しい・寂しい'];
+    const minLng = 139.5;
+    const maxLng = 139.95;
+    const minLat = 35.55;
+    const maxLat = 35.95;
+
+    const newDummyPoints = Array.from({ length: 1000 }, (_, index) => {
+      const lng = minLng + Math.random() * (maxLng - minLng);
+      const lat = minLat + Math.random() * (maxLat - minLat);
+      const emotion = emotionOptionsPool[Math.floor(Math.random() * emotionOptionsPool.length)];
+
+      return {
+        id: `dummy-${Date.now()}-${index}`,
+        name: `テスト投稿-${index + 1}`,
+        emotion,
+        color: emotionColorMap[emotion] || '#facc15',
+        coords: [lng, lat],
+        radiusMeters: 20,
+        comments: [
+          { emotion, time: 'テスト', text: 'ダミーデータによる仮投稿です' },
+          { emotion, time: 'テスト', text: '擬似データで動作確認中です' },
+        ],
+      };
+    });
+
+    generatedDummyIdsRef.current = [...generatedDummyIdsRef.current, ...newDummyPoints.map((item) => item.id)];
+    setPostedEmotionPoints((current) => [...current, ...newDummyPoints]);
+    setStatus('東京都内にダミーデータ 1,000 件を追加しました');
+    setStatusType('success');
+  };
+
+  const handleClearDummyData = () => {
+    const dummyIds = new Set(generatedDummyIdsRef.current);
+    setPostedEmotionPoints((current) => current.filter((point) => !dummyIds.has(point.id)));
+    generatedDummyIdsRef.current = [];
+    setStatus('ダミーデータを削除しました');
+    setStatusType('success');
+  };
 
   return (
     <div ref={mapContainerRef} className="map-container">
@@ -1694,6 +1771,52 @@ function MapPanel() {
               －
             </button>
           </div>
+
+          {import.meta.env.DEV && (
+            <div
+              style={{
+                position: 'absolute',
+                right: '18px',
+                bottom: '92px',
+                display: 'flex',
+                gap: '8px',
+                zIndex: 20,
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleGenerateTokyoDummyData}
+                style={{
+                  background: '#2563eb',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '999px',
+                  padding: '8px 14px',
+                  fontWeight: 700,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+                  cursor: 'pointer',
+                }}
+              >
+                ダミー 1万件生成
+              </button>
+              <button
+                type="button"
+                onClick={handleClearDummyData}
+                style={{
+                  background: '#ef4444',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '999px',
+                  padding: '8px 14px',
+                  fontWeight: 700,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+                  cursor: 'pointer',
+                }}
+              >
+                すぐ消す
+              </button>
+            </div>
+          )}
 
           <div className="scale-panel" aria-label="Scale selector">
             {scaleSteps.map((step, index) => (
