@@ -20,10 +20,10 @@ public class Post {
     private Emotion emotion;
 
     @Column(nullable = false)
-    private double latitude;
+    private Double latitude;
 
     @Column(nullable = false)
-    private double longitude;
+    private Double longitude;
 
     @Column(length = 200)
     private String comment;
@@ -31,11 +31,14 @@ public class Post {
     @Column(length = 100)
     private String locationName;
 
-    @Column(nullable = false)
-    private boolean deleted = false;
-
     @Column(nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    private Instant postedAt = Instant.now();
+
+    @Column(nullable = false)
+    private Instant updatedAt = Instant.now();
+
+    @Column(nullable = false)
+    private boolean isDeleted = false;
 
     public Long getId() {
         return id;
@@ -61,19 +64,19 @@ public class Post {
         this.emotion = emotion;
     }
 
-    public double getLatitude() {
+    public Double getLatitude() {
         return latitude;
     }
 
-    public void setLatitude(double latitude) {
+    public void setLatitude(Double latitude) {
         this.latitude = latitude;
     }
 
-    public double getLongitude() {
+    public Double getLongitude() {
         return longitude;
     }
 
-    public void setLongitude(double longitude) {
+    public void setLongitude(Double longitude) {
         this.longitude = longitude;
     }
 
@@ -93,19 +96,43 @@ public class Post {
         this.locationName = locationName;
     }
 
+    public Instant getPostedAt() {
+        return postedAt;
+    }
+
+    public void setPostedAt(Instant postedAt) {
+        this.postedAt = postedAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
     public boolean isDeleted() {
-        return deleted;
+        return isDeleted;
     }
 
     public void setDeleted(boolean deleted) {
-        this.deleted = deleted;
+        isDeleted = deleted;
+    }
+
+    public boolean getDeleted() {
+        return isDeleted;
+    }
+
+    public void setDeletedValue(boolean deleted) {
+        this.isDeleted = deleted;
     }
 
     public Instant getCreatedAt() {
-        return createdAt;
+        return postedAt;
     }
 
     public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
+        this.postedAt = createdAt;
     }
 }

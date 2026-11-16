@@ -10,14 +10,14 @@ public class Emotion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 40)
-    private String name;
+    @Column(nullable = false, unique = true, length = 20)
+    private String emotionName;
 
-    @Column(nullable = false, length = 40)
-    private String displayName;
+    @Column(nullable = false, length = 10)
+    private String colorName;
 
-    @Column(nullable = false, length = 20)
-    private String iconColor;
+    @Column(nullable = false)
+    private Integer sortOrder;
 
     public Long getId() {
         return id;
@@ -28,26 +28,34 @@ public class Emotion {
     }
 
     public String getName() {
-        return name;
+        return emotionName;
     }
 
     public void setName(String name) {
-        this.name = name;
+        this.emotionName = name;
     }
 
-    public String getDisplayName() {
-        return displayName;
+    public String getEmotionName() {
+        return emotionName;
     }
 
-    public void setDisplayName(String displayName) {
-        this.displayName = displayName;
+    public void setEmotionName(String emotionName) {
+        this.emotionName = emotionName;
     }
 
-    public String getIconColor() {
-        return iconColor;
+    public String getColorName() {
+        return colorName;
     }
 
-    public void setIconColor(String iconColor) {
-        this.iconColor = iconColor;
+    public void setColorName(String colorName) {
+        this.colorName = colorName;
+    }
+
+    public Integer getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
     }
 }

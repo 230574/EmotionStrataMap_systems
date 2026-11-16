@@ -4,8 +4,10 @@ import com.example.backend.entity.Post;
 import com.example.backend.repository.PostRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class SearchPostService {
@@ -17,12 +19,20 @@ public class SearchPostService {
     }
 
     public List<Post> search(String keyword, String emotionName, String fromDate, String toDate) {
-        return postRepository.findByDeletedFalseOrderByCreatedAtDesc().stream()
-                .filter(post -> keyword == null || keyword.isBlank()
-                        || (post.getLocationName() != null && post.getLocationName().toLowerCase().contains(keyword.toLowerCase()))
-                        || (post.getComment() != null && post.getComment().toLowerCase().contains(keyword.toLowerCase())))
-                .filter(post -> emotionName == null || emotionName.isBlank()
-                        || post.getEmotion() != null && post.getEmotion().getName().equalsIgnoreCase(emotionName))
-                .collect(Collectors.toList());
+        Instant fromInstant = parseDate(fromDate, true);
+        Instant toInstant = parseDate(toDate, false);
+        return postRepository.searchPosts(keyword, emotionName, fromInstant, toInstant);
+    }
+
+    private Instant parseDate(String value, boolean startOfDay) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        LocalDate date = LocalDate.parse(value);
+        if (startOfDay) {
+            return date.atStartOfDay().toInstant(ZoneOffset.UTC);
+        }
+        return date.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
     }
 }
