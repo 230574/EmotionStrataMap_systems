@@ -22,7 +22,7 @@ public class TimeSeriesService {
     }
 
     public List<Map<String, Object>> buildSeries(int startHour, int endHour, String emotionName) {
-        List<Post> posts = postRepository.findByDeletedFalseOrderByCreatedAtDesc();
+        List<Post> posts = postRepository.findVisibleOrderByPostedAtDesc();
         List<Map<String, Object>> data = new ArrayList<>();
 
         for (int hour = startHour; hour <= endHour; hour++) {

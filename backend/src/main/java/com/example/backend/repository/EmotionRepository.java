@@ -8,5 +8,6 @@ import java.util.Optional;
 
 @Repository
 public interface EmotionRepository extends JpaRepository<Emotion, Long> {
-    Optional<Emotion> findByName(String name);
+    @Query("SELECT e FROM Emotion e WHERE e.emotionName = :name")
+    Optional<Emotion> findByName(@Param("name") String name);
 }

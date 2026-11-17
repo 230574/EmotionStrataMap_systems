@@ -47,4 +47,12 @@ public class PlaceType {
     public void setRadiusM(Integer radiusM) {
         this.radiusM = radiusM;
     }
+
+    public void setRadiusMeters(int radiusMeters) {
+        this.radiusM = radiusMeters;
+    }
+
+    public Integer getRadiusMeters() {
+        return radiusM;
+    }
 }

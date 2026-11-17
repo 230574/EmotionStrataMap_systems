@@ -54,11 +54,11 @@ public class PostService {
     }
 
     public Optional<Post> findLatest() {
-        return postRepository.findByDeletedFalseOrderByCreatedAtDesc().stream().findFirst();
+        return postRepository.findVisibleOrderByPostedAtDesc().stream().findFirst();
     }
 
     public List<Post> findAllVisible() {
-        return postRepository.findByDeletedFalseOrderByCreatedAtDesc();
+        return postRepository.findVisibleOrderByPostedAtDesc();
     }
 
     @Transactional

@@ -19,7 +19,7 @@ public class EmotionSummaryService {
     }
 
     public List<Map<String, Object>> summarize(double centerLat, double centerLng, double radiusKm) {
-        List<Post> posts = postRepository.findByDeletedFalseOrderByCreatedAtDesc();
+        List<Post> posts = postRepository.findVisibleOrderByPostedAtDesc();
         List<Map<String, Object>> summary = new ArrayList<>();
 
         for (Post post : posts) {
