@@ -9,22 +9,23 @@ public class RepresentativePlace {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false)
+    @Column(name = "latitude", nullable = false)
     private double latitude;
 
-    @Column(nullable = false)
+    @Column(name = "longitude", nullable = false)
     private double longitude;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "place_type_id", nullable = false)
     private PlaceType placeType;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
     public Long getId() {

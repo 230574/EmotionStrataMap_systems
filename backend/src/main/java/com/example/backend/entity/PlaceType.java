@@ -8,12 +8,13 @@ public class PlaceType {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(name = "type_name", nullable = false, unique = true, length = 30)
     private String typeName;
 
-    @Column(nullable = false)
+    @Column(name = "radius_m", nullable = false)
     private Integer radiusM;
 
     public Long getId() {

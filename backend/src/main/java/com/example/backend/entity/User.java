@@ -9,22 +9,29 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 40)
+    @Column(name = "username", nullable = false, unique = true, length = 40)
     private String username;
 
-    @Column(nullable = false, length = 255)
+    @Column(name = "nickname", nullable = false, length = 20)
+    private String nickname;
+
+    @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    @Column(nullable = false, length = 20)
+    @Column(name = "role", nullable = false, length = 10)
     private String role = "USER";
 
-    @Column(nullable = false)
+    @Column(name = "deleted", nullable = false)
     private boolean deleted = false;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt = Instant.now();
 
     public Long getId() {
         return id;
@@ -40,6 +47,14 @@ public class User {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getNickname() {
+        return nickname == null ? username : nickname;
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
     }
 
     public String getPasswordHash() {
@@ -72,5 +87,13 @@ public class User {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

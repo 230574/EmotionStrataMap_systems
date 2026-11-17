@@ -9,6 +9,7 @@ public class Post {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -19,25 +20,25 @@ public class Post {
     @JoinColumn(name = "emotion_id", nullable = false)
     private Emotion emotion;
 
-    @Column(nullable = false)
+    @Column(name = "latitude", nullable = false)
     private Double latitude;
 
-    @Column(nullable = false)
+    @Column(name = "longitude", nullable = false)
     private Double longitude;
 
-    @Column(length = 200)
+    @Column(name = "comment", length = 200)
     private String comment;
 
-    @Column(length = 100)
+    @Column(name = "location_name", length = 100)
     private String locationName;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "posted_at", nullable = false, updatable = false)
     private Instant postedAt = Instant.now();
 
-    @Column(nullable = false)
+    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
-    @Column(nullable = false)
+    @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 
     public Long getId() {

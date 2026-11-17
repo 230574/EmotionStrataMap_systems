@@ -8,15 +8,16 @@ public class Emotion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(name = "emotion_name", nullable = false, unique = true, length = 20)
     private String emotionName;
 
-    @Column(nullable = false, length = 10)
+    @Column(name = "color_name", nullable = false, length = 10)
     private String colorName;
 
-    @Column(nullable = false)
+    @Column(name = "sort_order", nullable = false)
     private Integer sortOrder;
 
     public Long getId() {
