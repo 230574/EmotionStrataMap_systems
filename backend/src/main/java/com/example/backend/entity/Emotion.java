@@ -18,7 +18,7 @@ public class Emotion {
     private String colorName;
 
     @Column(name = "sort_order", nullable = false)
-    private Integer sortOrder;
+    private Integer sortOrder = 999;
 
     public Long getId() {
         return id;
@@ -58,5 +58,21 @@ public class Emotion {
 
     public void setSortOrder(Integer sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public String getDisplayName() {
+        return emotionName;
+    }
+
+    public void setDisplayName(String displayName) {
+        // compatibility only: emotionName is the design-document field
+    }
+
+    public String getIconColor() {
+        return colorName;
+    }
+
+    public void setIconColor(String iconColor) {
+        this.colorName = iconColor;
     }
 }

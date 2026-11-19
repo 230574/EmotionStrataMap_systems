@@ -38,7 +38,7 @@ class PostServiceTest {
         userRepository.save(user);
 
         Emotion emotion = new Emotion();
-        emotion.setName("happy");
+        emotion.setEmotionName("happy");
         emotion.setDisplayName("楽しい");
         emotion.setIconColor("#2ecc71");
         emotionRepository.save(emotion);

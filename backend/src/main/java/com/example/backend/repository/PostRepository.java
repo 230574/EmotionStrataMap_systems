@@ -35,4 +35,10 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             @Param("fromDate") Instant fromDate,
             @Param("toDate") Instant toDate
     );
+
+    @Query("SELECT p FROM Post p WHERE p.isDeleted = false ORDER BY p.postedAt DESC")
+    List<Post> findByDeletedFalseOrderByCreatedAtDesc();
+
+    @Query("SELECT p FROM Post p WHERE p.emotion.id = :emotionId AND p.isDeleted = false")
+    List<Post> findByEmotion_Id(@Param("emotionId") Long emotionId);
 }

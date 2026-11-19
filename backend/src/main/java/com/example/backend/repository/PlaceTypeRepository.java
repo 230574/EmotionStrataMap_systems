@@ -8,5 +8,9 @@ import java.util.Optional;
 
 @Repository
 public interface PlaceTypeRepository extends JpaRepository<PlaceType, Long> {
-    Optional<PlaceType> findByName(String name);
+    Optional<PlaceType> findByTypeName(String typeName);
+
+    default Optional<PlaceType> findByName(String name) {
+        return findByTypeName(name);
+    }
 }

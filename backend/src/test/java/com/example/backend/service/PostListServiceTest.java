@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
+import java.time.Instant;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
@@ -50,6 +52,7 @@ class PostListServiceTest {
         post1.setLongitude(139.1);
         post1.setComment("first");
         post1.setLocationName("A");
+        post1.setPostedAt(Instant.parse("2026-11-19T10:00:00Z"));
         postRepository.save(post1);
 
         Post post2 = new Post();
@@ -59,6 +62,7 @@ class PostListServiceTest {
         post2.setLongitude(139.2);
         post2.setComment("second");
         post2.setLocationName("B");
+        post2.setPostedAt(Instant.parse("2026-11-20T10:00:00Z"));
         postRepository.save(post2);
 
         assertThat(postService.findAllVisible()).hasSize(2);

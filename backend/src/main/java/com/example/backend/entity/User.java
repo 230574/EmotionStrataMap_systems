@@ -47,6 +47,9 @@ public class User {
 
     public void setUsername(String username) {
         this.username = username;
+        if (this.nickname == null) {
+            this.nickname = username;
+        }
     }
 
     public String getNickname() {

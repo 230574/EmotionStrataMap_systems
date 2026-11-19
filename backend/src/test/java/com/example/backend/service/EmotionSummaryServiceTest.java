@@ -61,8 +61,8 @@ class EmotionSummaryServiceTest {
         Post p2 = new Post();
         p2.setUser(user);
         p2.setEmotion(sad);
-        p2.setLatitude(35.1);
-        p2.setLongitude(139.1);
+        p2.setLatitude(35.0050);
+        p2.setLongitude(139.0050);
         p2.setComment("bad");
         p2.setLocationName("B");
         postRepository.save(p2);
