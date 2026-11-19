@@ -36,6 +36,8 @@ public class SecurityConfig {
                                 "/api/emotion-summary",
                                 "/api/time-series",
                                 "/api/representative-places",
+                                "/api/me",
+                                "/api/logout",
                                 "/error"
                         ).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
