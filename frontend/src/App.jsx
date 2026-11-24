@@ -1,36 +1,9 @@
 
-import { useEffect, useState } from 'react'
-import './App.css'
-import MapPanel from './MapPanel'
+import './App.css';
+import MapPanel from './MapPanel';
 
 function App() {
-  const [message, setMessage] = useState('Loading...')
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    fetch('/api/hello')
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`)
-        }
-        return response.text()
-      })
-      .then((text) => setMessage(text))
-      .catch((err) => {
-        console.error(err)
-        setError('バックエンドに接続できませんでした。')
-      })
-  }, [])
-
-  return (
-    <main className="app-shell">
-      <h1>EmotionStrataMap</h1>
-      <div className="message-box">
-        {error || message}
-      </div>
-      <MapPanel />
-    </main>
-  )
+  return <MapPanel />;
 }
 
 export default App
