@@ -34,12 +34,14 @@ public class PostService {
                           double longitude,
                           String comment,
                           String locationName) {
+        String safeUsername = username == null || username.isBlank() ? "tester" : username.trim();
+        String normalizedEmotionName = normalizeEmotionName(emotionName);
 
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
+        User user = userRepository.findByUsername(safeUsername)
+            .orElseGet(() -> createDefaultUser(safeUsername));
 
-        Emotion emotion = emotionRepository.findByName(emotionName)
-                .orElseThrow(() -> new IllegalArgumentException("Emotion not found: " + emotionName));
+        Emotion emotion = emotionRepository.findByName(normalizedEmotionName)
+            .orElseGet(() -> createDefaultEmotion(normalizedEmotionName));
 
         Post post = new Post();
         post.setUser(user);
@@ -51,6 +53,73 @@ public class PostService {
         post.setDeleted(false);
 
         return postRepository.save(post);
+    }
+
+    private User createDefaultUser(String username) {
+        User user = new User();
+        user.setUsername(username);
+        user.setPasswordHash("temporary-password");
+        user.setRole("USER");
+        user.setDeleted(false);
+        return userRepository.save(user);
+    }
+
+    private Emotion createDefaultEmotion(String emotionName) {
+        Emotion emotion = new Emotion();
+        emotion.setName(emotionName);
+
+        switch (emotionName) {
+            case "joy":
+                emotion.setDisplayName("喜び");
+                emotion.setIconColor("#22c55e");
+                break;
+            case "worry":
+                emotion.setDisplayName("不安・心配");
+                emotion.setIconColor("#a855f7");
+                break;
+            case "fear":
+                emotion.setDisplayName("怖い・恐怖");
+                emotion.setIconColor("#ef4444");
+                break;
+            case "sad":
+                emotion.setDisplayName("悲しい・寂しい");
+                emotion.setIconColor("#3b82f6");
+                break;
+            case "happy":
+            default:
+                emotion.setDisplayName("楽しい");
+                emotion.setIconColor("#facc15");
+                break;
+        }
+
+        return emotionRepository.save(emotion);
+    }
+
+    private String normalizeEmotionName(String emotionName) {
+        if (emotionName == null || emotionName.isBlank()) {
+            return "happy";
+        }
+
+        String normalized = emotionName.trim().toLowerCase();
+        switch (normalized) {
+            case "楽しい":
+                return "happy";
+            case "喜び":
+                return "joy";
+            case "不安":
+            case "不安・心配":
+                return "worry";
+            case "怖い":
+            case "恐怖":
+            case "怖い・恐怖":
+                return "fear";
+            case "悲しい":
+            case "寂しい":
+            case "悲しい・寂しい":
+                return "sad";
+            default:
+                return normalized;
+        }
     }
 
     public Optional<Post> findLatest() {

@@ -9,32 +9,33 @@ public class Post {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "post_id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "username", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emotion_id", nullable = false)
+    @JoinColumn(name = "emotion_id", referencedColumnName = "id", nullable = false)
     private Emotion emotion;
 
-    @Column(nullable = false)
+    @Column(name = "latitude", nullable = false)
     private double latitude;
 
-    @Column(nullable = false)
+    @Column(name = "longitude", nullable = false)
     private double longitude;
 
-    @Column(length = 200)
+    @Column(name = "comment", length = 200)
     private String comment;
 
-    @Column(length = 100)
+    @Column(name = "place_name", length = 100)
     private String locationName;
 
-    @Column(nullable = false)
+    @Column(name = "is_deleted", nullable = false)
     private boolean deleted = false;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "posted_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
     public Long getId() {

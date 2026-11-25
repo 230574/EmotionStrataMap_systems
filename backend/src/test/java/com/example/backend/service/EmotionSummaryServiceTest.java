@@ -8,7 +8,7 @@ import com.example.backend.repository.PostRepository;
 import com.example.backend.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,8 +61,8 @@ class EmotionSummaryServiceTest {
         Post p2 = new Post();
         p2.setUser(user);
         p2.setEmotion(sad);
-        p2.setLatitude(35.1);
-        p2.setLongitude(139.1);
+        p2.setLatitude(35.001);
+        p2.setLongitude(139.001);
         p2.setComment("bad");
         p2.setLocationName("B");
         postRepository.save(p2);

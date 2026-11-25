@@ -27,9 +27,22 @@ public class SearchPostController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String emotion,
             @RequestParam(required = false) String fromDate,
-            @RequestParam(required = false) String toDate) {
+            @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) Double minLng,
+            @RequestParam(required = false) Double minLat,
+            @RequestParam(required = false) Double maxLng,
+            @RequestParam(required = false) Double maxLat) {
 
-        List<Map<String, Object>> posts = searchPostService.search(keyword, emotion, fromDate, toDate).stream()
+        List<Map<String, Object>> posts = searchPostService.search(
+                        keyword,
+                        emotion,
+                        fromDate,
+                        toDate,
+                        minLng,
+                        minLat,
+                        maxLng,
+                        maxLat
+                ).stream()
                 .map(post -> {
                     Map<String, Object> item = new LinkedHashMap<>();
                     item.put("id", post.getId());
@@ -38,6 +51,7 @@ public class SearchPostController {
                     item.put("comment", post.getComment());
                     item.put("lat", post.getLatitude());
                     item.put("lng", post.getLongitude());
+                    item.put("createdAt", post.getCreatedAt());
                     return item;
                 })
                 .collect(Collectors.toList());
