@@ -18,8 +18,10 @@ CREATE TABLE place_types (
 
 CREATE TABLE users (
     user_id       VARCHAR(20) PRIMARY KEY CHECK (user_id ~ '^[A-Za-z0-9]{4,20}$'),
+    email         VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(72) NOT NULL,
     nickname      VARCHAR(20) NOT NULL,
+    terms_agreed  BOOLEAN NOT NULL DEFAULT false,
     role          VARCHAR(10) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()

@@ -33,6 +33,12 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
+    @Column(name = "email", nullable = true, unique = true, length = 255)
+    private String email;
+
+    @Column(name = "terms_agreed", nullable = false)
+    private boolean termsAgreed = false;
+
     public Long getId() {
         return id;
     }
@@ -98,5 +104,21 @@ public class User {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public boolean isTermsAgreed() {
+        return termsAgreed;
+    }
+
+    public void setTermsAgreed(boolean termsAgreed) {
+        this.termsAgreed = termsAgreed;
     }
 }
