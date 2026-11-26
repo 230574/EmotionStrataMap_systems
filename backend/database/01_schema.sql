@@ -24,7 +24,12 @@ CREATE TABLE users (
     terms_agreed  BOOLEAN NOT NULL DEFAULT false,
     role          VARCHAR(10) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    suspended     BOOLEAN NOT NULL DEFAULT false,
+    suspended_at  TIMESTAMPTZ,
+    suspension_reason VARCHAR(255),
+    deleted_at    TIMESTAMPTZ,
+    deleted_by_user_id VARCHAR(20)
 );
 
 CREATE TABLE posts (
@@ -57,6 +62,15 @@ CREATE TABLE representative_places (
                           ST_MakePoint(longitude::float8, latitude::float8), 4326
                       )::geography
                   ) STORED
+);
+
+CREATE TABLE operation_logs (
+    log_id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    operator_user_id VARCHAR(20) REFERENCES users (user_id),
+    target_user_id  VARCHAR(20),
+    action          VARCHAR(50) NOT NULL,
+    reason          VARCHAR(255),
+    logged_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX idx_posts_location

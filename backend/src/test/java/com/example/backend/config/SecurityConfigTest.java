@@ -32,7 +32,7 @@ class SecurityConfigTest {
 
     @Test
     void registerEndpointShouldAcceptPublicAccess() throws Exception {
-        String body = "{\"displayName\":\"セキュリティ確認\",\"email\":\"securitytest@example.com\",\"password\":\"password123\",\"passwordConfirmation\":\"password123\",\"termsAgreed\":true}";
+        String body = "{\"username\":\"security01\",\"nickname\":\"セキュリティ確認\",\"password\":\"password123\",\"passwordConfirmation\":\"password123\"}";
 
         mockMvc.perform(post("/api/register")
                         .contentType(MediaType.APPLICATION_JSON)

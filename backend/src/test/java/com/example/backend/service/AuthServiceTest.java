@@ -21,20 +21,20 @@ class AuthServiceTest {
 
     @Test
     void register_shouldCreateUserWithHashedPassword() {
-        User user = authService.register("alice", "password123");
+        User user = authService.register("alice01", "password123");
 
         assertThat(user.getId()).isNotNull();
-        assertThat(user.getUsername()).isEqualTo("alice");
+        assertThat(user.getUsername()).isEqualTo("alice01");
         assertThat(user.getPasswordHash()).isNotEqualTo("password123");
-        assertThat(userRepository.findByUsername("alice")).isPresent();
+        assertThat(userRepository.findByUsername("alice01")).isPresent();
     }
 
     @Test
     void login_shouldAuthenticateValidUser() {
-        authService.register("bob", "secret456");
+        authService.register("bob001", "secret456");
 
-        User loginUser = authService.login("bob", "secret456");
+        User loginUser = authService.login("bob001", "secret456");
         assertThat(loginUser).isNotNull();
-        assertThat(loginUser.getUsername()).isEqualTo("bob");
+        assertThat(loginUser.getUsername()).isEqualTo("bob001");
     }
 }

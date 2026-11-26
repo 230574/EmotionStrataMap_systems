@@ -1,8 +1,11 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.Post;
+import com.example.backend.entity.User;
+import com.example.backend.service.AuthService;
 import com.example.backend.service.PostService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
@@ -15,9 +18,11 @@ import java.util.stream.Collectors;
 public class PostController {
 
     private final PostService postService;
+    private final AuthService authService;
 
-    public PostController(PostService postService) {
+    public PostController(PostService postService, AuthService authService) {
         this.postService = postService;
+        this.authService = authService;
     }
 
     @GetMapping("/posts")
@@ -80,9 +85,16 @@ public class PostController {
     }
 
     @DeleteMapping("/posts/{postId}")
-    public ResponseEntity<Map<String, Object>> deletePost(@PathVariable Long postId) {
+    public ResponseEntity<Map<String, Object>> deletePost(@PathVariable Long postId, Authentication authentication) {
         try {
-            postService.deletePost(postId);
+            User currentUser = authService.getCurrentUser(authentication);
+            if (currentUser == null) {
+                return ResponseEntity.status(401).body(Map.of(
+                        "status", "error",
+                        "message", "ログインが必要です"
+                ));
+            }
+            postService.deletePost(postId, currentUser);
             Map<String, Object> response = new LinkedHashMap<>();
             response.put("status", "ok");
             response.put("message", "post deleted");

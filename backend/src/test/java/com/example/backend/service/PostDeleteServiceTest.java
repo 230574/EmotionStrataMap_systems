@@ -52,7 +52,7 @@ class PostDeleteServiceTest {
         post.setLocationName("delete place");
         post = postRepository.save(post);
 
-        postService.deletePost(post.getId());
+        postService.deletePost(post.getId(), user);
 
         Post deleted = postRepository.findById(post.getId()).orElseThrow();
         assertThat(deleted.isDeleted()).isTrue();

@@ -62,9 +62,34 @@ public class PostService {
     }
 
     @Transactional
-    public void deletePost(Long postId) {
+    public Post updatePost(Long postId, Post incoming, User operator) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("Post not found: " + postId));
+
+        boolean owner = post.getUser().getId().equals(operator.getId());
+        boolean admin = "ADMIN".equalsIgnoreCase(operator.getRole());
+        if (!owner && !admin) {
+            throw new SecurityException("Forbidden");
+        }
+
+        post.setComment(incoming.getComment());
+        if (incoming.getEmotion() != null) {
+            post.setEmotion(incoming.getEmotion());
+        }
+        postRepository.save(post);
+        return post;
+    }
+
+    @Transactional
+    public void deletePost(Long postId, User operator) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("Post not found: " + postId));
+
+        boolean owner = post.getUser().getId().equals(operator.getId());
+        boolean admin = "ADMIN".equalsIgnoreCase(operator.getRole());
+        if (!owner && !admin) {
+            throw new SecurityException("Forbidden");
+        }
         post.setDeleted(true);
         postRepository.save(post);
     }

@@ -32,29 +32,23 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@RequestBody Map<String, Object> payload) {
         try {
-            String displayName = value(payload, "displayName", "username", "nickname");
-            String email = value(payload, "email");
+            String username = value(payload, "username");
+            String nickname = value(payload, "displayName", "nickname");
             String password = value(payload, "password");
             String passwordConfirmation = value(payload, "passwordConfirmation", "passwordConfirm");
-            boolean termsAgreed = Boolean.TRUE.equals(payload.get("termsAgreed"))
-                    || Boolean.TRUE.equals(payload.get("terms"));
 
             if (!passwordConfirmation.isBlank() && !password.equals(passwordConfirmation)) {
                 throw new IllegalArgumentException("パスワードが一致しません");
             }
-            if (passwordConfirmation.isBlank()) {
-                throw new IllegalArgumentException("確認用パスワードを入力してください");
-            }
 
-            User user = authService.register(displayName, email, password, termsAgreed);
+            User user = authService.register(username, password, nickname);
 
             return ResponseEntity.ok(Map.of(
                     "status", "ok",
                     "message", "アカウントを作成しました",
                     "user", Map.of(
                             "id", user.getId(),
-                            "email", user.getEmail(),
-                            "username", user.getNickname(),
+                            "username", user.getUsername(),
                             "nickname", user.getNickname(),
                             "role", user.getRole()
                     )
@@ -73,15 +67,13 @@ public class AuthController {
             HttpServletRequest request
     ) {
         try {
-            String email = value(payload, "email", "username");
+            String username = value(payload, "username", "email");
             String password = value(payload, "password");
-            User user = authService.login(email, password);
+            User user = authService.login(username, password);
 
             var authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().toUpperCase());
             var authentication = new UsernamePasswordAuthenticationToken(
-                    user.getEmail() != null ? user.getEmail() : user.getUsername(),
-                    null,
-                    List.of(authority)
+                    user.getUsername(), null, List.of(authority)
             );
 
             SecurityContext context = SecurityContextHolder.createEmptyContext();
@@ -104,8 +96,7 @@ public class AuthController {
                     "redirectTo", redirectTo,
                     "user", Map.of(
                             "id", user.getId(),
-                            "email", user.getEmail() != null ? user.getEmail() : "",
-                            "username", user.getNickname(),
+                            "username", user.getUsername(),
                             "nickname", user.getNickname(),
                             "role", user.getRole()
                     )
